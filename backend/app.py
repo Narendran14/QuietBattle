@@ -36,18 +36,21 @@ else:
 
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy(app)
 
 
 # Session cookie configuration
-IS_PRODUCTION = os.getenv("FLASK_ENV") == "production"
+IS_PRODUCTION = (
+    os.getenv("RENDER", "").lower() == "true"
+    or os.getenv("FLASK_ENV", "").lower() == "production"
+)
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None" if IS_PRODUCTION else "Lax"
 app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 
 # CORS configuration
-FRONTEND_URL = os.getenv("FRONTEND_URL")
-
+FRONTEND_URL = os.getenv("FRONTEND_URL", "").rstrip("/")
 
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -57,14 +60,15 @@ ALLOWED_ORIGINS = [
     "https://quiet-battle.vercel.app",
 ]
 
+if FRONTEND_URL and FRONTEND_URL not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(FRONTEND_URL)
 
-if FRONTEND_URL:
-    ALLOWED_ORIGINS.append(FRONTEND_URL.rstrip("/"))
+CORS(
+    app,
+    origins=ALLOWED_ORIGINS,
+    supports_credentials=True
+)
 
-CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
-
-
-db = SQLAlchemy(app)
 
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
